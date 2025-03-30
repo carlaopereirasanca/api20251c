@@ -1,9 +1,6 @@
 package br.edu.ifsp.prw3.api20251c.controller;
 
-import br.edu.ifsp.prw3.api20251c.medico.DadosCadastroMedico;
-import br.edu.ifsp.prw3.api20251c.medico.DadosListagemMedico;
-import br.edu.ifsp.prw3.api20251c.medico.Medico;
-import br.edu.ifsp.prw3.api20251c.medico.MedicoRepository;
+import br.edu.ifsp.prw3.api20251c.medico.*;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,9 +8,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("medicos")
@@ -24,26 +24,114 @@ public class MedicoController {
 
     @PostMapping
     @Transactional
-    public void cadastrar(@RequestBody @Valid DadosCadastroMedico dados){
+    public ResponseEntity cadastrar(@RequestBody @Valid DadosCadastroMedico  dados,
+                                                        UriComponentsBuilder uriBuilder) {
 
-        repository.save( new Medico(dados) );
+        // ANTES: repository.save( new Medico(dados) );
+
+        // AGORA:
+
+        // Criando o objeto Medico, com os dados recebidos na requisição:
+        var medico = new Medico(dados);
+
+        // Salvando no banco:
+        repository.save( medico );
+
+        // Gerar automaticamente a URL para o novo recurso criado:
+        var uri = uriBuilder.path("/medicos/{id}").buildAndExpand(medico.getId()).toUri();
+
+        // Vamos aqui usar o DTO que criamos para o método atualizar:
+        return ResponseEntity.created(uri).body( new DadosDetalhamentoMedico(medico) );
     }
 
     @GetMapping
-    public List<Medico> listar() {
+    public ResponseEntity listar() {
 
-        return repository.findAll();
+        return ResponseEntity.ok( repository.findAll() );
     }
 
-    @GetMapping("algunsdados")
-    public Page<DadosListagemMedico> listarAlgunsDados(
-            @PageableDefault( size=2,
-                    page=0,
-                    sort={"nome","crm"},
-                    direction = Sort.Direction.DESC ) Pageable paginacao )
-    {
-        return repository.findAll(paginacao).map(DadosListagemMedico::new);
+    @GetMapping
+    @RequestMapping("algunsdados")
+    public ResponseEntity listarAlgunsDados( Pageable paginacao ) {
+
+        var pagina = repository.findAllByAtivoTrue(paginacao).map(DadosListagemMedico::new);
+
+        return ResponseEntity.ok(pagina);
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity getMedicoById(@PathVariable Long id) {
+
+        Optional<Medico> medicoOptional = repository.findById(id);
+
+        if (medicoOptional.isPresent()) {
+            Medico medico = medicoOptional.get();
+            return ResponseEntity.ok(new DadosDetalhamentoMedico(medico));
+        }
+        else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping
+    @Transactional
+    public ResponseEntity atualizar(@RequestBody @Valid DadosAtualizacaoMedico dados) {
+
+        Medico medico = repository.getReferenceById( dados.id() );
+        medico.atualizarInformacoes(dados);
+
+
+        // Pegamos o objeto médico no banco de dados;
+        // Atualizamos as informações no objeto;
+        // E agora? Como fazer pra gravar de volta, atualizado ?
+        // ...
+
+        // Não fazemos!!
+        // Como vimos nas aulas de JPA no início da disciplina,
+        // se estamos dentro de uma transação, basta atualizar o objeto,
+        // que automaticamente a JPA atualiza o objeto no BD
+        // (quando commitar a transação)!
+
+        return ResponseEntity.ok(new DadosDetalhamentoMedico(medico));
+
+    }
+
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity excluir(@PathVariable Long id) {
+
+        // Já vimos esta linha na funcionalidade de alterar:
+        Medico medico = repository.getReferenceById(id);
+
+        // Chama método na classe Medico que coloca
+        // o atributo 'ativo' como false:
+        medico.excluir();
+
+        // Lembrando, não precisamos regravar o objeto no BD.
+        // A JPA automaticamente atualiza o objeto no BD.
+
+        return ResponseEntity.noContent().build();
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
 
