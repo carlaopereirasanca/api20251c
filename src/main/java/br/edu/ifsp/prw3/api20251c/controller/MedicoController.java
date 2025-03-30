@@ -9,6 +9,8 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,8 +36,12 @@ public class MedicoController {
     }
 
     @GetMapping("algunsdados")
-    public Page<DadosListagemMedico> listarAlgunsDados(Pageable paginacao) {
-
+    public Page<DadosListagemMedico> listarAlgunsDados(
+            @PageableDefault( size=2,
+                    page=0,
+                    sort={"nome","crm"},
+                    direction = Sort.Direction.DESC ) Pageable paginacao )
+    {
         return repository.findAll(paginacao).map(DadosListagemMedico::new);
     }
 
