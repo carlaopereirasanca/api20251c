@@ -19,8 +19,14 @@ import java.util.Optional;
 @RequestMapping("medicos")
 public class MedicoController {
 
-    @Autowired
-    private MedicoRepository repository;
+    //@Autowired
+    //private MedicoRepository repository;
+
+    private final MedicoRepository repository;
+
+    public MedicoController(MedicoRepository repository) {
+        this.repository = repository;
+    }
 
     @PostMapping
     @Transactional
@@ -96,7 +102,6 @@ public class MedicoController {
 
     }
 
-
     @DeleteMapping("/{id}")
     @Transactional
     public ResponseEntity excluir(@PathVariable Long id) {
@@ -114,24 +119,4 @@ public class MedicoController {
         return ResponseEntity.noContent().build();
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
-
